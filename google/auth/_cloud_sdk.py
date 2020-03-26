@@ -132,7 +132,8 @@ def get_auth_access_token():
         access_token = subprocess.check_output(
             (command,) + _CLOUD_SDK_USER_ACCESS_TOKEN, stderr=subprocess.STDOUT
         )
-        return access_token
+        # remove the trailing "\n"
+        return (access_token[-1] == "\n") and access_token[:-1] or access_token
     except (subprocess.CalledProcessError, OSError, IOError) as caught_exc:
         new_exc = exceptions.UserAccessTokenError(
             "Failed to run `gcloud auth print-access-token`", caught_exc
