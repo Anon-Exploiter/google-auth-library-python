@@ -36,6 +36,7 @@ import json
 
 import six
 
+from google.auth import _cloud_sdk
 from google.auth import _helpers
 from google.auth import credentials
 from google.auth import exceptions
@@ -292,3 +293,39 @@ class Credentials(credentials.ReadOnlyScoped, credentials.Credentials):
             prep = {k: v for k, v in prep.items() if k not in strip}
 
         return json.dumps(prep)
+
+
+class UserAccessTokenCredentials(credentials.Credentials):
+    """Access token credentials for the current user account.
+
+    Obtain the current user account's access token by running
+    `gcloud auth print-access-token` command.
+    """
+
+    def __init__(self):
+        super(UserAccessTokenCredentials, self).__init__()
+
+    @_helpers.copy_docstring(credentials.Credentials)
+    def expired(self):
+        # Since extracting the expiry from the access token requires a network
+        # call to tokeninfo endpoint, we just get a new access token when needed.
+        return True
+
+    def refresh(self, request):
+        """Refreshes the access token.
+
+        Args:
+            request (google.auth.transport.Request): This argument is not used,
+                just set it to `None`.
+
+        Raises:
+            google.auth.exceptions.RefreshError: If the access token could
+                not be refreshed.
+        """
+        try:
+            self.token = _cloud_sdk.get_auth_access_token()
+        except exceptions.UserAccessTokenError as caught_exc:
+            new_exc = exceptions.RefreshError(
+                "Failed to refresh access token`", caught_exc
+            )
+            six.raise_from(new_exc, caught_exc)
